@@ -1,5 +1,10 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+// Log API URL for debugging (remove in production if needed)
+if (process.env.NODE_ENV === 'development') {
+  console.log('API Base URL:', API_BASE_URL);
+}
+
 export interface Token {
   id: number;
   token_number: number;
@@ -37,17 +42,26 @@ export interface WaitingTime {
 
 class ApiService {
   async generateToken(): Promise<Token> {
-    const response = await fetch(`${API_BASE_URL}/tokens/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) {
-      throw new Error('Failed to generate token');
+    try {
+      const response = await fetch(`${API_BASE_URL}/tokens/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Token generation failed:', response.status, errorText);
+        throw new Error(`Failed to generate token: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.token;
+    } catch (error: any) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error(`Cannot connect to backend. Please check if REACT_APP_API_URL is set correctly. Current: ${API_BASE_URL}`);
+      }
+      throw error;
     }
-    const data = await response.json();
-    return data.token;
   }
 
   async getQueueStatus(): Promise<QueueStatus> {
@@ -83,19 +97,27 @@ class ApiService {
   }
 
   async createCounter(name: string): Promise<Counter> {
-    const response = await fetch(`${API_BASE_URL}/counters`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name }),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create counter');
+    try {
+      const response = await fetch(`${API_BASE_URL}/counters`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Create counter failed:', response.status, error);
+        throw new Error(error.error || `Failed to create counter: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.counter;
+    } catch (error: any) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error(`Cannot connect to backend. Please check if REACT_APP_API_URL is set correctly. Current: ${API_BASE_URL}`);
+      }
+      throw error;
     }
-    const data = await response.json();
-    return data.counter;
   }
 
   async closeCounter(counterId: number): Promise<Counter> {
