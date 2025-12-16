@@ -5,18 +5,19 @@ const DB_PATH = path.join(__dirname, 'queue.db');
 
 let db;
 
-const initDatabase = () => {
+const initDatabase = (callback) => {
   db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
       console.error('Error opening database:', err.message);
+      if (callback) callback(err);
     } else {
       console.log('Connected to SQLite database');
-      createTables();
+      createTables(callback);
     }
   });
 };
 
-const createTables = () => {
+const createTables = (callback) => {
   // Counters table
   db.run(`
     CREATE TABLE IF NOT EXISTS counters (
@@ -28,6 +29,7 @@ const createTables = () => {
   `, (err) => {
     if (err) {
       console.error('Error creating counters table:', err);
+      if (callback) callback(err);
       return;
     }
 
@@ -46,6 +48,7 @@ const createTables = () => {
     `, (err) => {
       if (err) {
         console.error('Error creating tokens table:', err);
+        if (callback) callback(err);
         return;
       }
 
@@ -73,7 +76,12 @@ const createTables = () => {
             } else {
               console.log('Default counter created');
             }
+            // Call callback after all initialization is complete
+            if (callback) callback(null);
           });
+        } else {
+          // Call callback after all initialization is complete
+          if (callback) callback(null);
         }
       });
     });

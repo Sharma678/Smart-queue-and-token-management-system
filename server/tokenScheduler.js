@@ -18,7 +18,10 @@ const checkAndUpdateTokens = () => {
      AND datetime(called_at, '+5 minutes') <= datetime('now')`,
     (err, calledTokens) => {
       if (err) {
-        console.error('Error checking called tokens:', err);
+        // Only log error if it's not a "table doesn't exist" error (which is expected during startup)
+        if (err.code !== 'SQLITE_ERROR' || !err.message.includes('no such table')) {
+          console.error('Error checking called tokens:', err);
+        }
         return;
       }
 
@@ -58,7 +61,10 @@ const checkAndUpdateTokens = () => {
      AND datetime(called_at, '+6 minutes') <= datetime('now')`,
     (err, servingTokens) => {
       if (err) {
-        console.error('Error checking serving tokens:', err);
+        // Only log error if it's not a "table doesn't exist" error (which is expected during startup)
+        if (err.code !== 'SQLITE_ERROR' || !err.message.includes('no such table')) {
+          console.error('Error checking serving tokens:', err);
+        }
         return;
       }
 

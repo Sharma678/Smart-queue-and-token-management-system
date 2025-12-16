@@ -23,11 +23,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Initialize database
-initDatabase();
-
-// Start token scheduler for automatic status updates
-startTokenScheduler();
+// Initialize database and start scheduler after tables are created
+initDatabase((err) => {
+  if (err) {
+    console.error('Database initialization failed:', err);
+    return;
+  }
+  
+  // Start token scheduler for automatic status updates
+  // Only start after database tables are confirmed to exist
+  startTokenScheduler();
+});
 
 // Routes
 app.use('/api/tokens', tokenRoutes);
