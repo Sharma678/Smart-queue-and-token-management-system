@@ -1,0 +1,27 @@
+services:
+  # Backend API Service
+  - type: web
+    name: queue-management-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: queue-management-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false  # Set this manually after backend is deployed
+      - key: REACT_APP_WS_URL
+        sync: false  # Set this manually after backend is deployed
+
+
