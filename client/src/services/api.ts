@@ -5,6 +5,13 @@ if (process.env.NODE_ENV === 'development') {
   console.log('API Base URL:', API_BASE_URL);
 }
 
+// Helper function to create abort signal with timeout (polyfill for older browsers)
+const createTimeoutSignal = (timeoutMs: number): AbortSignal => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+};
+
 export interface Token {
   id: number;
   token_number: number;
@@ -48,6 +55,8 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
         },
+        // Add timeout for Render cold starts (up to 60 seconds)
+        signal: createTimeoutSignal(60000),
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -57,8 +66,12 @@ class ApiService {
       const data = await response.json();
       return data.token;
     } catch (error: any) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        throw new Error(`Cannot connect to backend. Please check if REACT_APP_API_URL is set correctly. Current: ${API_BASE_URL}`);
+      console.error('Generate token error:', error);
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        throw new Error('Backend is taking too long to respond. This might be a cold start (Render free tier). Please try again in a few seconds.');
+      }
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('CORS')) {
+        throw new Error(`Cannot connect to backend at ${API_BASE_URL}. This could be due to:\n1. Backend is sleeping (Render free tier - first request takes 30-60s)\n2. CORS configuration issue\n3. Network connectivity problem\n\nPlease try again or check the backend URL.`);
       }
       throw error;
     }
@@ -104,6 +117,8 @@ class ApiService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name }),
+        // Add timeout for Render cold starts
+        signal: createTimeoutSignal(60000),
       });
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -113,8 +128,12 @@ class ApiService {
       const data = await response.json();
       return data.counter;
     } catch (error: any) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        throw new Error(`Cannot connect to backend. Please check if REACT_APP_API_URL is set correctly. Current: ${API_BASE_URL}`);
+      console.error('Create counter error:', error);
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        throw new Error('Backend is taking too long to respond. This might be a cold start (Render free tier). Please try again in a few seconds.');
+      }
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('CORS')) {
+        throw new Error(`Cannot connect to backend at ${API_BASE_URL}. This could be due to:\n1. Backend is sleeping (Render free tier - first request takes 30-60s)\n2. CORS configuration issue\n3. Network connectivity problem\n\nPlease try again or check the backend URL.`);
       }
       throw error;
     }
